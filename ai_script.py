@@ -1390,7 +1390,17 @@ def generate_iteratively(model, token_to_idx, idx_to_token, seed_tokens, total_t
 # Add a global variable for the AI's own name.
 AI_NAME = "Bob"
 
+def handle_single_word(input_text):
+    # If the input is a single word, return a clarifying message.
+    if len(input_text.split()) == 1:
+        return "I'm here! Can you elaborate on that?"
+    return None
+
 def generate_response(user_input):
+    # Check for single-word input before proceeding.
+    single_response = handle_single_word(user_input)
+    if single_response is not None:
+        return single_response
     # Check if the user is asking for the AI's name.
     if "your name" in user_input.lower():
         # Cache and return the answer immediately.
