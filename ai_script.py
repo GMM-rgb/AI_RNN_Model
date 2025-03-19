@@ -1274,28 +1274,33 @@ def generate_iteratively(model, token_to_idx, idx_to_token, seed_tokens, total_t
     return detokenize_numbers([ idx_to_token[idx] for idx in generated[len(seed_tokens): ] ])
 
 # NEW HELPER FUNCTION: Improved simulate backspace
-def simulate_backspace_improved(generated_tokens, threshold=2):
+def simulate_backspace_improved(generated_tokens, threshold=1):
     """
     Compress consecutive duplicate tokens.
-    If a sequence of identical tokens appears more than 'threshold' times,
-    reduce the sequence to exactly 'threshold' occurrences.
+    For non-period tokens, collapse duplicates to a single instance.
+    For periods (ASCII 46), if the group size is exactly 2 or 3 (i.e. ".." or "..."), keep them;
+    if more than 3 are consecutive, compress them to exactly 3.
     """
     if not generated_tokens:
         return generated_tokens
     new_tokens = []
-    count = 1
-    new_tokens.append(generated_tokens[0])
-    for token in generated_tokens[1:]:
-        if token == new_tokens[-1]:
+    i = 0
+    while i < len(generated_tokens):
+        token = generated_tokens[i]
+        count = 1
+        while i + count < len(generated_tokens) and generated_tokens[i + count] == token:
             count += 1
-            if count == threshold + 1:
-                import time
-                time.sleep(0.5)  # Recalibration pause for repeating token
-            if count <= threshold:
-                new_tokens.append(token)
+        if token == 46:  # period character
+            if count == 2 or count == 3:
+                allowed = count
+            elif count > 3:
+                allowed = 3
+            else:
+                allowed = 1
         else:
-            count = 1
-            new_tokens.append(token)
+            allowed = 1
+        new_tokens.extend([token] * allowed)
+        i += count
     return new_tokens
 
 # Modify generate_iteratively() to use the improved backspace simulation.
@@ -1567,7 +1572,7 @@ else:
                 if not memory:
                     print("No memory stored.")
                     continue
-                # ...existing code for displaying memory is now handled by display_memory()...
+                # display_memory()
                 if edit_mode == 's':
                     # Single selection mode: choose one index to either edit or delete.
                     sel = input("Enter the index number to select: ").strip()

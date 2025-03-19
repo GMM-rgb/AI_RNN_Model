@@ -17,6 +17,18 @@
     },
     {
         "input": "Hey bro.",
-        "response": "Hey Maximus! bWhrt'o. op? rYor do o o oro ng o oboz o. obr, ro. bro. Ko b crb o. o"
+        "response": "Hey there Maximus! bWhrt'o. op? rYor do o o oro ng o oboz o. obr, ro. bro. Ko b crb o. o"
+    },
+    {
+        "input": "Hey bro..",
+        "response": "Hey Maximus! bWhrt'o. .p? .Y. .. .. d. .. .. .. .. .. .. ng. .. .. .z. .. .. .. ., .. .. .. .. .. K. .. .. c. .. .. .. .. .. .. .. .. .. .. .. .. .."
+    },
+    {
+        "input": "Hey there",
+        "response": "I'm doingtreah, eMyxteus! yTyyhkhyf yyyhthe. yHthyey tetheyWty hytp? y ty hyywh ehey e tetheyY tyhyht hyhthy t tetey tey tey tey teyhy"
+    },
+    {
+        "input": "Hey bro.",
+        "response": "Hey there Maximus! bWhrt'o. op? rYor do o o oro ng o oboz o. obr, ro. bro. Ko b crb o. o (Enhanced)"
     }
 ]
