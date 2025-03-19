@@ -30,5 +30,9 @@
     {
         "input": "Hey bro.",
         "response": "Hey there Maximus! bWhrt'o. op? rYor do o o oro ng o oboz o. obr, ro. bro. Ko b crb o. o (Enhanced)"
+    },
+    {
+        "input": "However, how are you doing?",
+        "response": "I'm doing great, Maximus! Thank you for asking. How can I help you today?"
     }
 ]
