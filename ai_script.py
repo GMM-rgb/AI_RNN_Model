@@ -1626,3 +1626,218 @@ def update_memory(new_memory):
         json.dump(new_memory, file, indent=4)
 
 # ==============================================================
+
+# Add these near the top with other global definitions
+CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ai_cache.json")
+RESPONSE_CACHE = {}
+MODEL_CACHE = {}
+TRAINING_CACHE = {
+    'corpus_hash': {},  # Store hashes of training data
+    'model_states': {},  # Store trained model states
+    'embeddings': {},   # Store word embeddings
+    'token_maps': {}    # Store token-to-index mappings
+}
+
+def save_cache():
+    """Save cache to disk"""
+    cache_data = {
+        'response_cache': RESPONSE_CACHE,
+        'training_cache': TRAINING_CACHE
+    }
+    with open(CACHE_FILE, "w") as f:
+        json.dump(cache_data, f)
+
+def load_cache():
+    """Load cache from disk"""
+    global RESPONSE_CACHE, TRAINING_CACHE
+    if os.path.exists(CACHE_FILE):
+        try:
+            with open(CACHE_FILE, "r") as f:
+                cache_data = json.load(f)
+                RESPONSE_CACHE = cache_data.get('response_cache', {})
+                TRAINING_CACHE = cache_data.get('training_cache', {
+                    'corpus_hash': {},
+                    'model_states': {},
+                    'embeddings': {},
+                    'token_maps': {}
+                })
+        except:
+            print("Cache file corrupted, starting fresh")
+            RESPONSE_CACHE = {}
+            TRAINING_CACHE = {
+                'corpus_hash': {},
+                'model_states': {},
+                'embeddings': {},
+                'token_maps': {}
+            }
+
+def compute_corpus_hash(corpus):
+    """Compute hash of corpus for cache lookup"""
+    import hashlib
+    return hashlib.md5(corpus.encode()).hexdigest()
+
+# Modify train_neural_model to use cache
+def train_neural_model(corpus, num_epochs=10):
+    """Train neural model with caching"""
+    corpus_hash = compute_corpus_hash(corpus)
+    
+    # Check cache first
+    if corpus_hash in TRAINING_CACHE['corpus_hash']:
+        cached_model_state = TRAINING_CACHE['model_states'].get(corpus_hash)
+        cached_token_maps = TRAINING_CACHE['token_maps'].get(corpus_hash)
+        
+        if cached_model_state and cached_token_maps:
+            # Reconstruct model from cache
+            token_to_idx, idx_to_token = cached_token_maps
+            vocab_size = len(token_to_idx)
+            model = RNNGenerator(vocab_size, embed_dim=10, hidden_dim=20)
+            model.load_state_dict(cached_model_state)
+            return model, token_to_idx, idx_to_token
+
+    # If not in cache, train normally
+    token_to_idx, idx_to_token = build_token_vocab(corpus)
+    vocab_size = len(token_to_idx)
+    model = RNNGenerator(vocab_size, embed_dim=10, hidden_dim=20)
+    
+    # Prepare training sequences (input: all tokens except last, target: all tokens except first)
+    tokens = tokenize_text(corpus)
+    input_seq = tokens[:-1]
+    target_seq = tokens[1:]
+    X = torch.tensor([token_to_idx[t] for t in input_seq], dtype=torch.long).unsqueeze(0)
+    y = torch.tensor([token_to_idx[t] for t in target_seq], dtype=torch.long).unsqueeze(0)
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.01)
+
+    for epoch in range(num_epochs):
+        hidden = None
+        optimizer.zero_grad()
+        output, hidden = model(X, hidden)
+        loss = criterion(output.view(-1, vocab_size), y.view(-1))
+        loss.backward()
+        optimizer.step()
+        if (epoch + 1) % 5 == 0:
+            print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item():.4f}")
+    
+    # Cache the results
+    TRAINING_CACHE['corpus_hash'][corpus_hash] = True
+    TRAINING_CACHE['model_states'][corpus_hash] = model.state_dict()
+    TRAINING_CACHE['token_maps'][corpus_hash] = (token_to_idx, idx_to_token)
+    save_cache()
+    
+    return model, token_to_idx, idx_to_token
+
+# Modify generate_response to use response cache
+def generate_response(user_input):
+    # Check response cache first
+    if user_input in RESPONSE_CACHE:
+        return RESPONSE_CACHE[user_input]
+        
+    tokens_placeholder = {"username": "Maximus"}
+    # === Begin Generation Procedure ===
+    matched_numbers = set()
+    conv_resp = find_best_conversation_match(user_input)
+    conv_text = replace_tokens(conv_resp, tokens_placeholder) if conv_resp else ""
+    emotion_resp = extract_emotion_response(user_input, tokens_placeholder)
+    for word in user_input.split():
+        num = get_number_from_word(word)
+        if num is None:
+            _, num = find_best_match(word)
+        if num is not None:
+            matched_numbers.add(num)
+    sentence_candidates = re.split(r'(?<=[.!?])\s+', user_input)
+    for candidate in sentence_candidates:
+        candidate = candidate.strip()
+        if candidate:
+            _, num = find_best_sentence_match(candidate)
+            if num is not None:
+                matched_numbers.add(num)
+    if len(user_input) > 50:
+        _, num = find_best_paragraph_match(user_input)
+        if num is not None:
+            matched_numbers.add(num)
+    combined_response = ""
+    used_response_ids = set()
+    for num in matched_numbers:
+        if num in responses and num not in used_response_ids:
+            combined_response += responses[num] + " "
+            used_response_ids.add(num)
+    if conv_text:
+        combined_response = conv_text + " " + combined_response
+    if emotion_resp:
+        combined_response = emotion_resp + " " + combined_response
+    if not combined_response.strip():
+        combined_response = "AI: No response available for this input."
+    else:
+        combined_response = replace_tokens(combined_response, tokens_placeholder)
+    replaced_responses = [replace_tokens(resp, tokens_placeholder) for resp in responses.values()]
+    # Incorporate vocabulary corpus into the overall training corpus.
+    vocab_corpus = build_vocabulary_corpus()
+    corpus = (user_input + " ") * 3 + combined_response + " " + conv_text + " " + " ".join(replaced_responses) + " " + vocab_corpus
+    token_model = build_token_model(corpus)
+    neural_model, token_to_idx, idx_to_token = train_neural_model(corpus, num_epochs=10)
+    seed_text = conv_text if conv_text else combined_response
+    tokens_seed = tokenize_text(seed_text)
+    neural_iterative = ""
+    if neural_model is not None and token_to_idx is not None:
+        neural_iterative = generate_iteratively(neural_model, token_to_idx, idx_to_token, tokens_seed, total_tokens=50, chunk_size=5)
+    generated_tokens = []
+    num_generated = 20
+    current_token = tokens_seed[-1] if tokens_seed else 32
+    for _ in range(num_generated):
+        next_token = predict_next_token(current_token, token_model)
+        if next_token is None:
+            break
+        generated_tokens.append(next_token)
+        current_token = next_token
+    generated_extension = detokenize_numbers(generated_tokens)
+    initial_response = combined_response + " " + generated_extension
+    combined_final = initial_response + " " + neural_iterative
+    final_response = review_and_correct_response(combined_final, token_model)
+    final_response = validate_response(user_input, final_response)
+    final_response = ensure_correct_words(final_response)
+    final_response = confirm_generation(final_response, token_model)
+    # NEW: Refine final response using punctuation cleanup and similar memory.
+    final_response = refine_response_with_memory(final_response, user_input)
+    # === End Generation Procedure ===
+    
+    # Cache the final response
+    RESPONSE_CACHE[user_input] = final_response
+    save_cache()
+    
+    return cleanup_and_format_response(final_response)
+
+# Add cache cleanup function
+def cleanup_cache(max_size=1000):
+    """Remove oldest entries if cache exceeds max_size"""
+    if len(RESPONSE_CACHE) > max_size:
+        # Convert to list to get oldest entries
+        items = list(RESPONSE_CACHE.items())
+        # Keep only the most recent max_size items
+        RESPONSE_CACHE.clear()
+        RESPONSE_CACHE.update(dict(items[-max_size: ]))
+    
+    # Cleanup training cache
+    if len(TRAINING_CACHE['corpus_hash']) > max_size:
+        corpus_hashes = list(TRAINING_CACHE['corpus_hash'].keys())
+        for old_hash in corpus_hashes[:-max_size]:
+            TRAINING_CACHE['corpus_hash'].pop(old_hash, None)
+            TRAINING_CACHE['model_states'].pop(old_hash, None)
+            TRAINING_CACHE['embeddings'].pop(old_hash, None)
+            TRAINING_CACHE['token_maps'].pop(old_hash, None)
+    
+    save_cache()
+
+# Load cache at startup
+load_cache()
+
+# Add periodic cache cleanup to main loop
+if __name__ == '__main__':
+    load_cache()  # Load cache at startup
+    while True:
+        # ...existing main loop code...
+        
+        # Add periodic cache cleanup
+        cleanup_cache()
+        
+        # ...rest of existing main loop...
