@@ -1,6 +1,14 @@
 [
     {
         "input": "Hey there",
-        "response": "I'm doingtreah, eMyxteus! yTyyhkhyf yyyhthe. yHthyey tetheyWty hytp? y ty hyywh ehey e tetheyY tyhyht hyhthy t tetey tey tey tey tey yhy y"
+        "response": "Hey there Maximus! Thank you for coming to chat with me, what can I help you with today?"
+    },
+    {
+        "input": "Hey there",
+        "response": "I'm doingtreah, eMyxteus! yTyyhkhyf yyyhthe. yHthyey tetheyWty hytp? y ty hyywh ehey e tetheyY tyhyht hyhthy t tetey tey tey tey tey"
+    },
+    {
+        "input": "What are you up to?",
+        "response": "I'm doingatreat, tM xtaus! tTh k tf t t a. tHt ata ata wtc talpty a? tG at a at ata atNtata t at atat ata atWt a tatat a t a at ata atY a tat t t t a t at atat at at at at at at t"
     }
 ]
