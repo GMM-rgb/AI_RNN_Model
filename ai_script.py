@@ -965,7 +965,7 @@ def is_response_coherent(response):
     unique_sentences = set(sentences)
     return len(sentences) == len(unique_sentences) and all(len(s.split()) > 2 for s in sentences)
 
-MEMORY_FILE = "/Users/maximus.farvour/Downloads/ai_memory.json"
+MEMORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ai_memory.json")
 
 def load_memory():
     """
