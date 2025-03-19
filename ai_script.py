@@ -1382,8 +1382,18 @@ def generate_iteratively(model, token_to_idx, idx_to_token, seed_tokens, total_t
     return detokenize_numbers([ idx_to_token[idx] for idx in generated[len(seed_tokens): ] ])
 
 # Integrate the neural network into generate_response.
+# Add a global variable for the AI's own name.
+AI_NAME = "Bob"
+
 def generate_response(user_input):
-    tokens_placeholder = {"username": "Maximus"}  # Defined at start
+    # Check if the user is asking for the AI's name.
+    if "your name" in user_input.lower():
+        # Cache and return the answer immediately.
+        RESPONSE_CACHE[user_input] = f"My name is {AI_NAME}."
+        save_cache()
+        return f"My name is {AI_NAME}."
+    # Add bot's name to token placeholders.
+    tokens_placeholder = {"username": "Maximus", "botname": AI_NAME}
     final_response = ""
     for attempt in range(3):
         # === Begin Generation Procedure ===
@@ -1733,74 +1743,91 @@ def generate_response(user_input):
     if user_input in RESPONSE_CACHE:
         return RESPONSE_CACHE[user_input]
         
-    tokens_placeholder = {"username": "Maximus"}
-    # === Begin Generation Procedure ===
-    matched_numbers = set()
-    conv_resp = find_best_conversation_match(user_input)
-    conv_text = replace_tokens(conv_resp, tokens_placeholder) if conv_resp else ""
-    emotion_resp = extract_emotion_response(user_input, tokens_placeholder)
-    for word in user_input.split():
-        num = get_number_from_word(word)
-        if num is None:
-            _, num = find_best_match(word)
-        if num is not None:
-            matched_numbers.add(num)
-    sentence_candidates = re.split(r'(?<=[.!?])\s+', user_input)
-    for candidate in sentence_candidates:
-        candidate = candidate.strip()
-        if candidate:
-            _, num = find_best_sentence_match(candidate)
+    # Check if the user is asking for the AI's name.
+    if "your name" in user_input.lower():
+        # Cache and return the answer immediately.
+        RESPONSE_CACHE[user_input] = f"My name is {AI_NAME}."
+        save_cache()
+        return f"My name is {AI_NAME}."
+    # Add bot's name to token placeholders.
+    tokens_placeholder = {"username": "Maximus", "botname": AI_NAME}
+    final_response = ""
+    for attempt in range(3):
+        # === Begin Generation Procedure ===
+        matched_numbers = set()
+        conv_resp = find_best_conversation_match(user_input)
+        conv_text = replace_tokens(conv_resp, tokens_placeholder) if conv_resp else ""
+        emotion_resp = extract_emotion_response(user_input, tokens_placeholder)
+        for word in user_input.split():
+            num = get_number_from_word(word)
+            if num is None:
+                _, num = find_best_match(word)
             if num is not None:
                 matched_numbers.add(num)
-    if len(user_input) > 50:
-        _, num = find_best_paragraph_match(user_input)
-        if num is not None:
-            matched_numbers.add(num)
-    combined_response = ""
-    used_response_ids = set()
-    for num in matched_numbers:
-        if num in responses and num not in used_response_ids:
-            combined_response += responses[num] + " "
-            used_response_ids.add(num)
-    if conv_text:
-        combined_response = conv_text + " " + combined_response
-    if emotion_resp:
-        combined_response = emotion_resp + " " + combined_response
-    if not combined_response.strip():
-        combined_response = "AI: No response available for this input."
-    else:
-        combined_response = replace_tokens(combined_response, tokens_placeholder)
-    replaced_responses = [replace_tokens(resp, tokens_placeholder) for resp in responses.values()]
-    # Incorporate vocabulary corpus into the overall training corpus.
-    vocab_corpus = build_vocabulary_corpus()
-    corpus = (user_input + " ") * 3 + combined_response + " " + conv_text + " " + " ".join(replaced_responses) + " " + vocab_corpus
-    token_model = build_token_model(corpus)
-    neural_model, token_to_idx, idx_to_token = train_neural_model(corpus, num_epochs=10)
-    seed_text = conv_text if conv_text else combined_response
-    tokens_seed = tokenize_text(seed_text)
-    neural_iterative = ""
-    if neural_model is not None and token_to_idx is not None:
-        neural_iterative = generate_iteratively(neural_model, token_to_idx, idx_to_token, tokens_seed, total_tokens=50, chunk_size=5)
-    generated_tokens = []
-    num_generated = 20
-    current_token = tokens_seed[-1] if tokens_seed else 32
-    for _ in range(num_generated):
-        next_token = predict_next_token(current_token, token_model)
-        if next_token is None:
+        sentence_candidates = re.split(r'(?<=[.!?])\s+', user_input)
+        for candidate in sentence_candidates:
+            candidate = candidate.strip()
+            if candidate:
+                _, num = find_best_sentence_match(candidate)
+                if num is not None:
+                    matched_numbers.add(num)
+        if len(user_input) > 50:
+            _, num = find_best_paragraph_match(user_input)
+            if num is not None:
+                matched_numbers.add(num)
+        combined_response = ""
+        used_response_ids = set()
+        for num in matched_numbers:
+            if num in responses and num not in used_response_ids:
+                combined_response += responses[num] + " "
+                used_response_ids.add(num)
+        if conv_text:
+            combined_response = conv_text + " " + combined_response
+        if emotion_resp:
+            combined_response = emotion_resp + " " + combined_response
+        if not combined_response.strip():
+            combined_response = "AI: No response available for this input."
+        else:
+            combined_response = replace_tokens(combined_response, tokens_placeholder)
+        replaced_responses = [replace_tokens(resp, tokens_placeholder) for resp in responses.values()]
+        # Incorporate vocabulary corpus into the overall training corpus.
+        vocab_corpus = build_vocabulary_corpus()
+        corpus = (user_input + " ") * 3 + combined_response + " " + conv_text + " " + " ".join(replaced_responses) + " " + vocab_corpus
+        token_model = build_token_model(corpus)
+        neural_model, token_to_idx, idx_to_token = train_neural_model(corpus, num_epochs=10)
+        seed_text = conv_text if conv_text else combined_response
+        tokens_seed = tokenize_text(seed_text)
+        neural_iterative = ""
+        if neural_model is not None and token_to_idx is not None:
+            neural_iterative = generate_iteratively(neural_model, token_to_idx, idx_to_token, tokens_seed, total_tokens=50, chunk_size=5)
+        generated_tokens = []
+        num_generated = 20
+        current_token = tokens_seed[-1] if tokens_seed else 32
+        for _ in range(num_generated):
+            next_token = predict_next_token(current_token, token_model)
+            if next_token is None:
+                break
+            generated_tokens.append(next_token)
+            current_token = next_token
+        generated_extension = detokenize_numbers(generated_tokens)
+        initial_response = combined_response + " " + generated_extension
+        combined_final = initial_response + " " + neural_iterative
+        final_response = review_and_correct_response(combined_final, token_model)
+        final_response = validate_response(user_input, final_response)
+        final_response = ensure_correct_words(final_response)
+        final_response = confirm_generation(final_response, token_model)
+        # NEW: Refine final response using punctuation cleanup and similar memory.
+        final_response = refine_response_with_memory(final_response, user_input)
+        # === End Generation Procedure ===
+        
+        prev = {resp.strip().lower() for resp in review_memory(user_input)}
+        if final_response.strip().lower() not in prev:
             break
-        generated_tokens.append(next_token)
-        current_token = next_token
-    generated_extension = detokenize_numbers(generated_tokens)
-    initial_response = combined_response + " " + generated_extension
-    combined_final = initial_response + " " + neural_iterative
-    final_response = review_and_correct_response(combined_final, token_model)
-    final_response = validate_response(user_input, final_response)
-    final_response = ensure_correct_words(final_response)
-    final_response = confirm_generation(final_response, token_model)
-    # NEW: Refine final response using punctuation cleanup and similar memory.
-    final_response = refine_response_with_memory(final_response, user_input)
-    # === End Generation Procedure ===
-    
+        else:
+            print(f"Duplicate response detected, regenerating... Attempt {attempt+1}")
+    if final_response.strip().lower() in prev:
+        final_response += " (Enhanced)"
+    save_to_memory({"input": user_input, "response": final_response})
     # Cache the final response
     RESPONSE_CACHE[user_input] = final_response
     save_cache()
