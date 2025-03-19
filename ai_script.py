@@ -1474,7 +1474,7 @@ def generate_response(user_input):
         else:
             print(f"Duplicate response detected, regenerating... Attempt {attempt+1}")
     if final_response.strip().lower() in prev:
-        final_response += " (Enhanced)"
+        final_response += " (Fixed response)"
     save_to_memory({"input": user_input, "response": final_response})
     return cleanup_and_format_response(final_response)
 
