@@ -857,33 +857,46 @@ def extract_emotion_response(user_text, tokens):
             return replace_tokens(resp, tokens)
     return ""
 
-def tokenize_text(text):
-    """
-    Tokenize text into words, then split words into letters, and convert letters to numbers.
-    Returns a list of numerical tokens.
-    """
-    tokens = []
-    for word in text.split():
-        for letter in word:
-            tokens.append(ord(letter))  # Convert letter to ASCII number
-        tokens.append(32)  # Add space as a separator (ASCII 32)
-    return tokens[:-1]  # Remove trailing space token
+# Add a new function for naive syllable splitting.
+def split_into_syllables(word):
+    vowels = "aeiouyAEIOUY"
+    syllables = []
+    current = ""
+    for i, ch in enumerate(word):
+        current += ch
+        # Mark syllable boundary when a vowel is found and next character is not a vowel.
+        if ch in vowels and (i + 1 == len(word) or word[i+1] not in vowels):
+            syllables.append(current)
+            current = ""
+    if current:
+        syllables.append(current)
+    return syllables
 
-def detokenize_numbers(numbers):
-    """
-    Convert a list of numerical tokens back into text.
-    """
+# Modify tokenize_text to use syllables instead of letters.
+def tokenize_text(text):
+    tokens = []
+    words = text.split()  # splitting by whitespace
+    for word in words:
+        sylls = split_into_syllables(word)
+        tokens.extend(sylls)
+        tokens.append(" ")  # append a delimiter token for word boundary
+    if tokens and tokens[-1] == " ":
+        tokens.pop()
+    return tokens
+
+# Replace detokenize_numbers with detokenize_tokens to convert token list back to text.
+def detokenize_tokens(tokens):
     words = []
-    current_word = []
-    for num in numbers:
-        if num == 32:  # ASCII for space
+    current_word = ""
+    for token in tokens:
+        if token == " ":
             if current_word:
-                words.append("".join(current_word))
-                current_word = []
+                words.append(current_word)
+                current_word = ""
         else:
-            current_word.append(chr(num))  # Convert ASCII number back to character
+            current_word += token
     if current_word:
-        words.append("".join(current_word))
+        words.append(current_word)
     return " ".join(words)
 
 def build_token_model(text):
@@ -947,7 +960,7 @@ def review_and_correct_response(response, token_model):
                 if next_token:
                     corrected_tokens.append(next_token)
 
-        corrected_response = detokenize_numbers(corrected_tokens)
+        corrected_response = detokenize_tokens(corrected_tokens)
         if is_response_coherent(corrected_response):
             return corrected_response
 
@@ -1196,7 +1209,7 @@ def generate_neural_output(model, token_to_idx, idx_to_token, seed_tokens, num_g
             outputs.append(last_idx)
     # Convert generated indices back to tokens and then to text.
     generated_tokens = [idx_to_token[idx] for idx in outputs]
-    return detokenize_numbers(generated_tokens)
+    return detokenize_tokens(generated_tokens)
 
 # NEW FUNCTION: Iterative Neural Generation
 def generate_iteratively(model, token_to_idx, idx_to_token, seed_tokens, total_tokens=50, chunk_size=5):
@@ -1223,7 +1236,7 @@ def generate_iteratively(model, token_to_idx, idx_to_token, seed_tokens, total_t
                 out, hidden = model(input_tensor, hidden)
             current_idx = out[0, -1].argmax().item()
         generated.extend(chunk)
-    return detokenize_numbers([ idx_to_token[idx] for idx in generated[len(seed_tokens): ] ])
+    return detokenize_tokens([ idx_to_token[idx] for idx in generated[len(seed_tokens): ] ])
 
 # NEW HELPER FUNCTION: Build vocabulary corpus from vocabulary_data.
 def build_vocabulary_corpus():
@@ -1271,7 +1284,7 @@ def generate_iteratively(model, token_to_idx, idx_to_token, seed_tokens, total_t
         # Simulate backspace correction if repetition occurs.
         generated = simulate_backspace(generated, threshold=3)
         generated.extend(chunk)
-    return detokenize_numbers([ idx_to_token[idx] for idx in generated[len(seed_tokens): ] ])
+    return detokenize_tokens([ idx_to_token[idx] for idx in generated[len(seed_tokens): ] ])
 
 # NEW HELPER FUNCTION: Improved simulate backspace
 def simulate_backspace_improved(generated_tokens, threshold=1):
@@ -1328,7 +1341,7 @@ def generate_iteratively(model, token_to_idx, idx_to_token, seed_tokens, total_t
         # Compress duplicate tokens in the generated sequence.
         generated = simulate_backspace_improved(generated, threshold=2)
         generated.extend(chunk)
-    return detokenize_numbers([ idx_to_token[idx] for idx in generated[len(seed_tokens): ] ])
+    return detokenize_tokens([ idx_to_token[idx] for idx in generated[len(seed_tokens): ] ])
 
 # NEW GLOBAL PARAMETER for context lookback (set to 0 to use entire history)
 CONTEXT_LOOKBACK = 0  # adjust this number to use only the last N tokens as context
@@ -1355,9 +1368,9 @@ def predict_words_ahead(model, token_to_idx, idx_to_token, seed_tokens, num_word
         char = idx_to_token[next_idx]
         if char == 32:  # space delimiter
             # split generated text into words and count non-empty ones
-            words = detokenize_numbers(generated).split()
+            words = detokenize_tokens(generated).split()
             predicted_words = words
-    return detokenize_numbers(generated[len(seed_tokens): ])
+    return detokenize_tokens(generated[len(seed_tokens): ])
 
 # MODIFY: Improved generate_iteratively() that now accepts context_lookback parameter.
 def generate_iteratively(model, token_to_idx, idx_to_token, seed_tokens, total_tokens=50, chunk_size=5, context_lookback=CONTEXT_LOOKBACK):
@@ -1384,7 +1397,7 @@ def generate_iteratively(model, token_to_idx, idx_to_token, seed_tokens, total_t
             current_idx = out[0, -1].argmax().item()
         generated = simulate_backspace_improved(generated, threshold=2)
         generated.extend(chunk)
-    return detokenize_numbers([ idx_to_token[idx] for idx in generated[len(seed_tokens): ] ])
+    return detokenize_tokens([ idx_to_token[idx] for idx in generated[len(seed_tokens): ] ])
 
 # Integrate the neural network into generate_response.
 # Add a global variable for the AI's own name.
@@ -1460,14 +1473,14 @@ def generate_response(user_input):
             neural_iterative = generate_iteratively(neural_model, token_to_idx, idx_to_token, tokens_seed, total_tokens=50, chunk_size=5)
         generated_tokens = []
         num_generated = 20
-        current_token = tokens_seed[-1] if tokens_seed else 32
+        current_token = tokens_seed[-1] if tokens_seed else " "
         for _ in range(num_generated):
             next_token = predict_next_token(current_token, token_model)
             if next_token is None:
                 break
             generated_tokens.append(next_token)
             current_token = next_token
-        generated_extension = detokenize_numbers(generated_tokens)
+        generated_extension = detokenize_tokens(generated_tokens)
         initial_response = combined_response + " " + generated_extension
         combined_final = initial_response + " " + neural_iterative
         final_response = review_and_correct_response(combined_final, token_model)
@@ -1817,14 +1830,14 @@ def generate_response(user_input):
             neural_iterative = generate_iteratively(neural_model, token_to_idx, idx_to_token, tokens_seed, total_tokens=50, chunk_size=5)
         generated_tokens = []
         num_generated = 20
-        current_token = tokens_seed[-1] if tokens_seed else 32
+        current_token = tokens_seed[-1] if tokens_seed else " "
         for _ in range(num_generated):
             next_token = predict_next_token(current_token, token_model)
             if next_token is None:
                 break
             generated_tokens.append(next_token)
             current_token = next_token
-        generated_extension = detokenize_numbers(generated_tokens)
+        generated_extension = detokenize_tokens(generated_tokens)
         initial_response = combined_response + " " + generated_extension
         combined_final = initial_response + " " + neural_iterative
         final_response = review_and_correct_response(combined_final, token_model)
@@ -1877,9 +1890,98 @@ load_cache()
 if __name__ == '__main__':
     load_cache()  # Load cache at startup
     while True:
-        # ...existing main loop code...
+        print("Select mode:")
+        print("1. Chat")
+        print("2. Edit Memory")
+        print("q. Quit")
+        mode = input("Enter your choice: ").strip()
+        if mode.lower() == 'q':
+            break
+        if mode == '1':
+            # Chat mode (existing code)
+            print("Interactive AI Chat (type 'quit' or 'exit' to leave)")
+            while True:
+                user_text = input("You: ").strip()
+                if user_text.lower() in ['quit', 'exit']:
+                    break
+                reply = generate_response(user_text)
+                print("AI: ", end='', flush=True)
+                stream_response(reply)
+        elif mode == '2':
+            # Display memory before editing.
+            display_memory()
+            
+            # Memory edit mode: select operation mode: single select or multi-select deletion
+            print("Memory Edit Mode:")
+            print("Enter 's' for single selection (edit or deletion) or 'm' for multi-select deletion.")
+            edit_mode = input("Your choice (s/m): ").strip().lower()
+            memory = load_memory()
+            if not memory:
+                print("No memory stored.")
+                continue
+            # display_memory()
+            if edit_mode == 's':
+                # Single selection mode: choose one index to either edit or delete.
+                sel = input("Enter the index number to select: ").strip()
+                try:
+                    idx = int(sel)
+                    if idx < 0 or idx >= len(memory):
+                        print("Invalid index.")
+                        continue
+                except ValueError:
+                    print("Please enter a valid number.")
+                    continue
+                print("Selected Entry:")
+                print(f"{idx}: Input: '{memory[idx].get('input','')}' | Response: '{memory[idx].get('response','')}'")
+                print("Press 1 to Edit, 2 to Delete this entry")
+                action = input("Enter your choice: ").strip()
+                if action == '1':
+                    new_resp = input("Enter new response text: ").strip()
+                    memory[idx]["response"] = new_resp
+                    update_memory(memory)
+                    print("Memory updated.")
+                elif action == '2':
+                    del memory[idx]
+                    update_memory(memory)
+                    print("Memory entry deleted.")
+                else:
+                    print("Invalid choice.")
+            elif edit_mode == 'm':
+                # Multi-select deletion mode.
+                print("Enter indices to delete one by one. Type 'd' when finished selection.")
+                indices_to_delete = []
+                while True:
+                    selection = input("Enter index (or 'd' to finish): ").strip()
+                    if selection.lower() == 'd':
+                        break
+                    try:
+                        idx = int(selection)
+                        if idx < 0 or idx >= len(memory):
+                            print("Invalid index.")
+                        else:
+                            if idx not in indices_to_delete:
+                                indices_to_delete.append(idx)
+                                print(f"Index {idx} selected.")
+                            else:
+                                print("Index already selected.")
+                    except ValueError:
+                        print("Please enter a valid number or 'd'.")
+                if not indices_to_delete:
+                    print("No indices selected.")
+                    continue
+                print("Selected Entries for deletion:")
+                for idx in indices_to_delete:
+                    print(f"{idx}: Input: '{memory[idx].get('input','')}' | Response: '{memory[idx].get('response','')}'")
+                confirm = input("Confirm deletion? (y/n): ").strip()
+                if confirm.lower() == 'y':
+                    for idx in sorted(indices_to_delete, reverse=True):
+                        del memory[idx]
+                    update_memory(memory)
+                    print("Selected memory entries deleted.")
+                else:
+                    print("Deletion cancelled.")
+            else:
+                print("Invalid selection mode.")
         
         # Add periodic cache cleanup
         cleanup_cache()
-        
-        # ...rest of existing main loop...

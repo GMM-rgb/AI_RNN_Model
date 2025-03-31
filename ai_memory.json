@@ -54,5 +54,13 @@
     {
         "input": "How are you?",
         "response": "I'm doingare at, aMrxr us! aThrekeafwe arere. aHrarar? e areacreara lpayeaGe ere e arar e aNra aeae are a arear e arar e aYea rereaeare eaeae a are are are are are aeae (Fixed response)"
+    },
+    {
+        "input": "Hey there",
+        "response": "I'm doingthegreat, theMaximus! theThanksthefortheasking. theHeythes! s! s! thereWhat'stheup? the ng. wesome, thes! s! theretheYoure passiontheshinesthethrough. the there there there there there thetheare ng."
+    },
+    {
+        "input": "Hey bro.",
+        "response": "Hey there Maximus! bWhrt'o. op? rYor do o o oro ng o oboz o. obr, ro. bro. Ko b crb o. o (Fixed response)"
     }
 ]
