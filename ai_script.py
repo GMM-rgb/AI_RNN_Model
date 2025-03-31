@@ -131,6 +131,7 @@ data = [
     {"word": "Responsible", "number": 8},
     {"word": "Ambitious", "number": 8},
     {"word": "Passionate", "number": 8},
+    {"word": "Aboriginal", "number": 12}
     {"word": " ", "number": 9999}
 ]
 
@@ -849,6 +850,23 @@ vocabulary_data = [
             "He was accomplished towards how amazing he worked on his project."
         ],
         "synonyms": ["expert", "skilled"]
+    },
+    {
+        "word": "Personification",
+        "definition": "A person, animal, or object regarded as representing or embodying a quality, concept, or thing.",
+        "usage": [
+            "He was the very personification of British pluck and diplomacy",
+            "The design on the franc shows Marianne, the personification of the French republic"
+        ],
+        "synonyms": ["manifestation", "incarnation", "image", "avatar", "icon", "essence", "embodiment", "abstract"]
+    },
+    {
+        "word": "Franc",
+        "definition": "The basic monetary unit of Switzerland and several other countries (including France, Belgium, and Luxembourg until the introduction of the euro), equal to 100 centimes.",
+        "usage": [
+            None
+        ],
+        "synonyms": [None]
     }
 ]
 
