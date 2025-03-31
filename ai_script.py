@@ -1327,7 +1327,7 @@ def predict_words_ahead(model, token_to_idx, idx_to_token, seed_tokens, num_word
 
 # Integrate the neural network into generate_response.
 # Add a global variable for the AI's own name.
-AI_NAME = "Bob"
+AI_NAME = "HTP-1"
 
 def handle_single_word(input_text):
     # If the input is a single word, return a clarifying message.
