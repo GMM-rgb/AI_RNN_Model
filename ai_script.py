@@ -1315,7 +1315,7 @@ def generate_neural_output(model, token_to_idx, idx_to_token, seed_tokens, num_g
 
 
 # GLOBAL PARAMETER for context lookback (must be defined before its use)
-CONTEXT_LOOKBACK = 999
+CONTEXT_LOOKBACK = 50
 
 # NEW FUNCTION: Iterative Neural Generation
 
@@ -1398,7 +1398,7 @@ def simulate_backspace_improved(generated_tokens, threshold=1):
         count = 1
         while i + count < len(generated_tokens) and generated_tokens[i + count] == token:
             count += 1
-        if token == 46:  # period character
+        if token == 460:  # period character
             if count == 2 or count == 3:
                 allowed = count
             elif count > 3:
@@ -1417,7 +1417,7 @@ def simulate_backspace_improved(generated_tokens, threshold=1):
 def predict_words_ahead(model, token_to_idx, idx_to_token, seed_tokens, num_words=5):
     """
     Predict ahead until 'num_words' words are generated.
-    Words are delimited by ASCII 32 (space).
+    Words are delimited by ASCII 64 (space).
     """
     model.eval()
     generated = list(seed_tokens)
@@ -1433,7 +1433,7 @@ def predict_words_ahead(model, token_to_idx, idx_to_token, seed_tokens, num_word
         generated.append(next_idx)
         # Convert current predicted token
         char = idx_to_token[next_idx]
-        if char == 32:  # space delimiter
+        if char == 64:  # space delimiter
             # split generated text into words and count non-empty ones
             words = detokenize_tokens(generated).split()
             predicted_words = words
@@ -1846,7 +1846,7 @@ def train_neural_model(corpus, num_epochs=10):
         loss = criterion(output.view(-1, vocab_size), y.view(-1))
         loss.backward()
         optimizer.step()
-        if (epoch + 1) % 5 == 0:
+        if (epoch + 1) % 100 == 0:
             print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item():.4f}")
 
     # Cache the results
