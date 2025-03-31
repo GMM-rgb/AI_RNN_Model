@@ -4,87 +4,15 @@
         "response": "Hey there Maximus! Thank you for coming to chat with me, what can I help you with today?"
     },
     {
-        "input": "Hey there",
-        "response": "I'm doingtreah, eMyxteus! yTyyhkhyf yyyhthe. yHthyey tetheyWty hytp? y ty hyywh ehey e tetheyY tyhyht hyhthy t tetey tey tey tey tey"
-    },
-    {
-        "input": "What are you up to?",
-        "response": "I'm doingatreat, tM xtaus! tTh k tf t t a. tHt ata ata wtc talpty a? tG at a at ata atNtata t at atat ata atWt a tatat a t a at ata atY a tat t t t a t at atat at at at at at at t"
-    },
-    {
-        "input": "Hey there!",
-        "response": "I'm doingthreay, Mtxe us! tTtykytfhtyey. tHellhtheyey t the ey teyt the ey tethytep? thethytwyh y t the ey tYhetytyehytyeythehe e they tey tey"
-    },
-    {
-        "input": "Hey bro.",
-        "response": "Hey there Maximus! bWhrt'o. op? rYor do o o oro ng o oboz o. obr, ro. bro. Ko b crb o. o"
-    },
-    {
-        "input": "Hey bro..",
-        "response": "Hey Maximus! bWhrt'o. .p? .Y. .. .. d. .. .. .. .. .. .. ng. .. .. .z. .. .. .. ., .. .. .. .. .. K. .. .. c. .. .. .. .. .. .. .. .. .. .. .. .. .."
-    },
-    {
-        "input": "Hey there",
-        "response": "I'm doingtreah, eMyxteus! yTyyhkhyf yyyhthe. yHthyey tetheyWty hytp? y ty hyywh ehey e tetheyY tyhyht hyhthy t tetey tey tey tey teyhy"
-    },
-    {
-        "input": "However, how are you doing?",
-        "response": "I'm doing great, Maximus! Thank you for asking. How can I help you today?"
-    },
-    {
-        "input": "Hey bro.",
-        "response": "Hey there Maximus! bWhrt'o. op? rYor do o o oro ng o oboz o. obr, ro. bro. Ko b crb o. o (Enhanced)"
-    },
-    {
-        "input": "Hey there Bob!",
-        "response": "I'm doingtreah, yM xe us! tTtykytfbtyey. tHeyt the ey tWethytep? thethytwye y th he ey tYetytyeytyeythe e the the the the teytey"
-    },
-    {
-        "input": "How are you?",
-        "response": "I'm doingare at, aMrxr us! aThrekeafwe arere. aHrarar? e areacreara lpayeaGe ere e arar e aNra aeae are a arear e arar e aYea rereaeare eaeae a are are are are are aeae"
-    },
-    {
-        "input": "Hey bro.",
-        "response": "Hey there Maximus! bWhrt'o. op? rYor do o o oro ng o oboz o. obr, ro. bro. Ko b crb o. o (Fixed response)"
-    },
-    {
-        "input": "Hey bro",
-        "response": "Hey there Maximus! bWhrt'o. op? rYor do o o oro ng o oboz o. obr, ro. bro. Ko b crb o. o (Fixed response)"
-    },
-    {
-        "input": "How are you?",
-        "response": "I'm doingare at, aMrxr us! aThrekeafwe arere. aHrarar? e areacreara lpayeaGe ere e arar e aNra aeae are a arear e arar e aYea rereaeare eaeae a are are are are are aeae (Fixed response)"
-    },
-    {
-        "input": "Hey there",
-        "response": "I'm doingthegreat, theMaximus! theThanksthefortheasking. theHeythes! s! s! thereWhat'stheup? the ng. wesome, thes! s! theretheYoure passiontheshinesthethrough. the there there there there there thetheare ng."
-    },
-    {
-        "input": "Hey bro.",
-        "response": "Hey there Maximus! bWhrt'o. op? rYor do o o oro ng o oboz o. obr, ro. bro. Ko b crb o. o (Fixed response)"
+        "input": "Hi there, how are you?",
+        "response": "I'm doing great, Maximus! Thanks for asking. Anyway, Hello there, what are you doing today?"
     },
     {
         "input": "Hey bro",
         "response": "Hey Maximus! broWhat'sbroup? broYourbroideasbroarebroshapingbro mazibro path, bros! s! s! bro Keepbrostbrocoming. bro bro bro bro bro bro bro bro"
     },
     {
-        "input": "How are you doing?",
-        "response": "I'm doingagreat, aMaximus! aThanksaforaasking. aHelloathere, as! s! s! aaHias! s! aaaHowacana'mahelpayou? aGreetings, as! aaaaNiceatoaseeaa. ankst'saawesomeaaaaaaaYouaapassiollyshinesathrough. araaideaaaaa shapiaareaamaziaanth, aa are Keenstacomiaaare are are are are"
-    },
-    {
-        "input": "So, what's going on?",
-        "response": "Not much, whaMaxich, s. whaJustwhaherewhatot'schat! whaHeyt'smuch, ch, s! whaWhat'swhaup? whaThat'swhaawesome, whach, ch, ch, whawhaYourwhapassionwhashineswhathrough. whawhaideat'st'ssot'st'sshapingwha, mazit'st'snth, whach, ch, what'st'sKeepwhat'scoming. what'swhat'st'swhat'swhat's what's what's"
-    },
-    {
-        "input": "What are you doing currently?",
-        "response": "I'm doingagreat, aMaximus! aThanksaforaasking. aHelloathere, as! s! s! aaHias! s! aaaHowacana'mahelpayou? aHeyas! aaaaWhat'saup? aaawesomeaaaaaaYouaapassiollyshinesathrough. araaideaaaaa shapiaareaamaziaanth, aa are Keenstacomiaaare are are are are"
-    },
-    {
-        "input": "Hi HTP-1",
-        "response": "Not much, HTP-1Maxich, s. HTP-1JustHTP-1hereHTP-1toHTP-1chat! HTP-1HelloHTP-1theHTP-1, HTP-1xich, ch, s! HTP-1HTP-1HTP-1HTP-1HTP-1HTP-1HTP-1HTP-1HTP-1HTP-1HTP-1HTP-1 HTP-1 HTP-1"
-    },
-    {
-        "input": "What's up bro?",
-        "response": "Not much, uMaxich, s. uJustuhereutouchat! uHiuch, ch, ch, s! uHowucanuIurelpuyou? uHeyuch, ch, ch, uuWhat'suup? uYouruideasuaupshapinguumaziuppath, uch, ch, uupKeepusupcoming. ushpupuu up up up"
+        "input": "Hey, what's up today?",
+        "response": "Not much, whaMaxich, s. whaJustwhaherewhatot'schat! whaHit'smuch, ch, s! whaHowwhacanwhaIt'swhalpwhayou? whaHeych, ch, what'sWhat'swhaup? what'st'swhawhat'st'swhat's what's what's"
     }
 ]

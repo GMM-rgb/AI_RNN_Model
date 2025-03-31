@@ -2,16 +2,18 @@
 
 # Try to import Brython modules; if unavailable, we assume Terminal mode.
 try:
+    import os
+    import json
+    from difflib import get_close_matches
+    import re
+    import torch
+    import torch.optim as optim
+    import torch.nn as nn
     from browser import document, html, timer
     IS_BROWSER = True
 except ModuleNotFoundError:
     IS_BROWSER = False
 
-import random
-import re
-from difflib import get_close_matches
-import json
-import os
 
 print("                 ⚠ WORK IN PROGRESS ⚠                    ")
 print("=========================================================")
@@ -128,7 +130,8 @@ data = [
     {"word": "Reliable", "number": 8},
     {"word": "Responsible", "number": 8},
     {"word": "Ambitious", "number": 8},
-    {"word": "Passionate", "number": 8}
+    {"word": "Passionate", "number": 8},
+    {"word": " ", "number": 9999}
 ]
 
 # (b) Sentence-level JSON array.
@@ -234,6 +237,7 @@ format_templates = {
 }
 
 # (h) Vocabulary data with definitions, usage, and synonyms.
+# These are paramaters for info.
 vocabulary_data = [
     {
         "word": "Hello",
@@ -811,15 +815,26 @@ vocabulary_data = [
         "usage": [
             "I feel frustrated with the delays.",
             "She was frustrated by the lack of progress.",
+            "He was frustrated by the lack of progress",
             "He expressed his frustration openly."
         ],
         "synonyms": ["annoyed", "exasperated", "irritated"]
+    },
+    {
+        "word": "Accomplished",
+        "definition": "To be (accomplished) means to be highly skilled, proficient, and successful in a particular area or field, or to have successfully completed or achieved something significant.",
+        "usage": [
+            "I was accomplished by how well I did on X and Y",
+            "He was accomplished towards how amazing he worked on his project."
+        ],
+        "synonyms": ["expert", "skilled"]
     }
 ]
 
 # ==============================================================
 # 2. Helper Functions
 # ==============================================================
+
 
 def replace_tokens(text, tokens):
     """
@@ -831,6 +846,7 @@ def replace_tokens(text, tokens):
         text = text.replace("${" + key + "}", str(value))
     return text
 
+
 def get_number_from_word(word):
     """
     Return the numerical ID associated with a word (case-insensitive)
@@ -840,6 +856,7 @@ def get_number_from_word(word):
         if item["word"].lower() == word.lower():
             return item["number"]
     return None
+
 
 def find_best_match(user_input):
     """
@@ -852,6 +869,7 @@ def find_best_match(user_input):
         matched_word = matches[0]
         return matched_word, get_number_from_word(matched_word)
     return None, None
+
 
 def find_best_sentence_match(user_sentence):
     """
@@ -867,6 +885,7 @@ def find_best_sentence_match(user_sentence):
                 return matched_sentence, item["number"]
     return None, None
 
+
 def find_best_paragraph_match(user_paragraph):
     """
     Find a close match for a paragraph from the paragraph-level data.
@@ -880,6 +899,7 @@ def find_best_paragraph_match(user_paragraph):
             if item["paragraph"].lower() == matched_paragraph.lower():
                 return matched_paragraph, item["number"]
     return None, None
+
 
 def find_best_conversation_match(user_text):
     """
@@ -896,6 +916,7 @@ def find_best_conversation_match(user_text):
                 return item["response"]
     return None
 
+
 def extract_emotion_response(user_text, tokens):
     """
     Check if any emotion keyword from emotion_data is found within user_text.
@@ -908,6 +929,8 @@ def extract_emotion_response(user_text, tokens):
     return ""
 
 # Add a new function for naive syllable splitting.
+
+
 def split_into_syllables(word):
     vowels = "aeiouyAEIOUY"
     syllables = []
@@ -923,6 +946,8 @@ def split_into_syllables(word):
     return syllables
 
 # Modify tokenize_text to use syllables instead of letters.
+
+
 def tokenize_text(text):
     tokens = []
     words = text.split()  # splitting by whitespace
@@ -935,6 +960,8 @@ def tokenize_text(text):
     return tokens
 
 # Replace detokenize_numbers with detokenize_tokens to convert token list back to text.
+
+
 def detokenize_tokens(tokens):
     words = []
     current_word = ""
@@ -949,6 +976,7 @@ def detokenize_tokens(tokens):
         words.append(current_word)
     return " ".join(words)
 
+
 def build_token_model(text):
     """
     Build a token-based model from text. Each token maps to a list of tokens that follow it.
@@ -961,13 +989,16 @@ def build_token_model(text):
         model.setdefault(token, []).append(next_token)
     return model
 
+
 def predict_next_token(last_token, token_model):
     """
     Predict the next token deterministically based on the token model.
     """
     if last_token in token_model:
-        return token_model[last_token][0]  # Always pick the first option for determinism
+        # Always pick the first option for determinism
+        return token_model[last_token][0]
     return None
+
 
 def cleanup_and_format_response(response):
     """
@@ -985,6 +1016,7 @@ def cleanup_and_format_response(response):
             if not cleaned or s_clean.lower() != cleaned[-1].lower():
                 cleaned.append(s_clean)
     return header + "\n" + "\n".join(cleaned)
+
 
 def review_and_correct_response(response, token_model):
     """
@@ -1018,6 +1050,7 @@ def review_and_correct_response(response, token_model):
 
     return response  # Return the best attempt after max iterations
 
+
 def is_response_coherent(response):
     """
     Check if the response is coherent by ensuring:
@@ -1028,7 +1061,10 @@ def is_response_coherent(response):
     unique_sentences = set(sentences)
     return len(sentences) == len(unique_sentences) and all(len(s.split()) > 2 for s in sentences)
 
-MEMORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ai_memory.json")
+
+MEMORY_FILE = os.path.join(os.path.dirname(
+    os.path.abspath(__file__)), "ai_memory.json")
+
 
 def load_memory():
     """
@@ -1041,11 +1077,14 @@ def load_memory():
                 return []
             return memory
     return []
-    
+
 # NEW: Define update_memory() early so it is available when editing memory.
+
+
 def update_memory(new_memory):
     with open(MEMORY_FILE, "w") as file:
         json.dump(new_memory, file, indent=4)
+
 
 def save_to_memory(entry):
     """
@@ -1057,6 +1096,7 @@ def save_to_memory(entry):
     memory.append(entry)
     with open(MEMORY_FILE, "w") as file:
         json.dump(memory, file, indent=4)
+
 
 def review_memory(user_input):
     """
@@ -1072,6 +1112,7 @@ def review_memory(user_input):
                 related_responses.append(entry["response"])
     return related_responses
 
+
 def validate_response(user_input, response):
     """
     Validate the generated response by comparing it with past responses in memory.
@@ -1083,6 +1124,7 @@ def validate_response(user_input, response):
             # If the response is identical to a past response, refine it
             response += " (Refined based on memory)"
     return response
+
 
 def get_valid_words():
     # Build a set of valid words from JSON arrays and vocabulary data.
@@ -1114,6 +1156,8 @@ def get_valid_words():
     return valid
 
 # Helper function to lookup vocabulary definitions.
+
+
 def lookup_vocabulary(word):
     """
     Lookup vocabulary data for a given word.
@@ -1124,6 +1168,7 @@ def lookup_vocabulary(word):
         if entry["word"].lower() == lw:
             return entry
     return None
+
 
 def ensure_correct_words(response):
     """
@@ -1140,7 +1185,8 @@ def ensure_correct_words(response):
         elif clean_word.lower() in valid_words or word.istitle():
             corrected_response.append(word)
         else:
-            matches = difflib.get_close_matches(clean_word.lower(), list(valid_words), n=1, cutoff=0.8)
+            matches = difflib.get_close_matches(
+                clean_word.lower(), list(valid_words), n=1, cutoff=0.8)
             if matches:
                 replaced = matches[0]
                 if word[0].isupper():
@@ -1152,12 +1198,14 @@ def ensure_correct_words(response):
                 corrected_response.append(word)
     return " ".join(corrected_response)
 
+
 def stream_response(response):
     import time
     for char in response:
         print(char, end='', flush=True)
         time.sleep(0.05)
     print()
+
 
 def confirm_generation(response, token_model):
     """
@@ -1180,11 +1228,9 @@ def confirm_generation(response, token_model):
         response = review_and_correct_response(response, token_model)
     return response
 
-import torch
-import torch.nn as nn
-import torch.optim as optim
 
 # New Section: Neural Network Generation Module
+
 
 def build_token_vocab(corpus):
     """
@@ -1197,18 +1243,20 @@ def build_token_vocab(corpus):
     idx_to_token = {idx: token for token, idx in token_to_idx.items()}
     return token_to_idx, idx_to_token
 
+
 class RNNGenerator(nn.Module):
     def __init__(self, vocab_size, embed_dim, hidden_dim):
         super(RNNGenerator, self).__init__()
         self.embedding = nn.Embedding(vocab_size, embed_dim)
         self.rnn = nn.RNN(embed_dim, hidden_dim, batch_first=True)
         self.fc = nn.Linear(hidden_dim, vocab_size)
-    
+
     def forward(self, x, hidden):
         embeds = self.embedding(x)
         out, hidden = self.rnn(embeds, hidden)
         out = self.fc(out)
         return out, hidden
+
 
 def train_neural_model(corpus, num_epochs=10):
     """
@@ -1216,19 +1264,21 @@ def train_neural_model(corpus, num_epochs=10):
     """
     token_to_idx, idx_to_token = build_token_vocab(corpus)
     vocab_size = len(token_to_idx)
-    embed_dim = 10
-    hidden_dim = 20
+    embed_dim = 20
+    hidden_dim = 30
     model = RNNGenerator(vocab_size, embed_dim, hidden_dim)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.01)
-    
+    optimizer = optim.Adam(model.parameters(), lr=0.09)
+
     tokens = tokenize_text(corpus)
     # Prepare training sequences (input: all tokens except last, target: all tokens except first)
     input_seq = tokens[:-1]
     target_seq = tokens[1:]
-    X = torch.tensor([token_to_idx[t] for t in input_seq], dtype=torch.long).unsqueeze(0)
-    y = torch.tensor([token_to_idx[t] for t in target_seq], dtype=torch.long).unsqueeze(0)
-    
+    X = torch.tensor([token_to_idx[t]
+                     for t in input_seq], dtype=torch.long).unsqueeze(0)
+    y = torch.tensor([token_to_idx[t]
+                     for t in target_seq], dtype=torch.long).unsqueeze(0)
+
     for epoch in range(num_epochs):
         hidden = None
         optimizer.zero_grad()
@@ -1236,16 +1286,18 @@ def train_neural_model(corpus, num_epochs=10):
         loss = criterion(output.view(-1, vocab_size), y.view(-1))
         loss.backward()
         optimizer.step()
-        if (epoch + 1) % 5 == 0:
+        if (epoch + 1) % 100 == 0:
             print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item():.4f}")
     return model, token_to_idx, idx_to_token
 
-def generate_neural_output(model, token_to_idx, idx_to_token, seed_tokens, num_generated=20):
+
+def generate_neural_output(model, token_to_idx, idx_to_token, seed_tokens, num_generated=80):
     """
     Generate additional text using the trained neural model.
     """
     model.eval()
-    input_indices = torch.tensor([token_to_idx[t] for t in seed_tokens], dtype=torch.long).unsqueeze(0)
+    input_indices = torch.tensor(
+        [token_to_idx[t] for t in seed_tokens], dtype=torch.long).unsqueeze(0)
     hidden = None
     outputs = []
     with torch.no_grad():
@@ -1261,11 +1313,14 @@ def generate_neural_output(model, token_to_idx, idx_to_token, seed_tokens, num_g
     generated_tokens = [idx_to_token[idx] for idx in outputs]
     return detokenize_tokens(generated_tokens)
 
-# NEW GLOBAL PARAMETER for context lookback (must be defined before its use)
-CONTEXT_LOOKBACK = 0
+
+# GLOBAL PARAMETER for context lookback (must be defined before its use)
+CONTEXT_LOOKBACK = 999
 
 # NEW FUNCTION: Iterative Neural Generation
-def generate_iteratively(model, token_to_idx, idx_to_token, seed_tokens, total_tokens=50, chunk_size=5, context_lookback=CONTEXT_LOOKBACK):
+
+
+def generate_iteratively(model, token_to_idx, idx_to_token, seed_tokens, total_tokens=1000, chunk_size=10, context_lookback=CONTEXT_LOOKBACK):
     """
     Generate output iteratively using only the last 'context_lookback' tokens as context.
     After each chunk, compress consecutive duplicates using the improved backspace simulation.
@@ -1275,12 +1330,13 @@ def generate_iteratively(model, token_to_idx, idx_to_token, seed_tokens, total_t
     generated = list(seed_tokens)  # start with seed tokens
     hidden = None
     default_idx = list(token_to_idx.values())[0]
-    max_iterations = 20  # maximum iterations to prevent infinite loops
+    max_iterations = 15  # maximum iterations to prevent infinite loops
     iteration = 0
     while len(generated) < total_tokens and iteration < max_iterations:
         iteration += 1
         context = generated if context_lookback == 0 else generated[-context_lookback:]
-        X = torch.tensor([[ token_to_idx.get(t, default_idx) for t in context ]], dtype=torch.long)
+        X = torch.tensor([[token_to_idx.get(t, default_idx)
+                         for t in context]], dtype=torch.long)
         with torch.no_grad():
             output, hidden = model(X, hidden)
         chunk = []
@@ -1296,9 +1352,11 @@ def generate_iteratively(model, token_to_idx, idx_to_token, seed_tokens, total_t
         if new_generated == generated:
             break  # no change detected, break out to avoid infinite loop
         generated = new_generated + chunk
-    return detokenize_tokens([ idx_to_token[idx] for idx in generated[len(seed_tokens): ] ])
+    return detokenize_tokens([idx_to_token[idx] for idx in generated[len(seed_tokens):]])
 
 # NEW HELPER FUNCTION: Build vocabulary corpus from vocabulary_data.
+
+
 def build_vocabulary_corpus():
     """
     Build additional corpus text from vocabulary data,
@@ -1311,6 +1369,8 @@ def build_vocabulary_corpus():
     return corpus_text
 
 # NEW HELPER FUNCTION: Simulate backspace editing.
+
+
 def simulate_backspace(generated_tokens, threshold=3):
     """
     If the same token is repeated consecutively 'threshold' times, simulate a backspace by removing the last token.
@@ -1320,6 +1380,8 @@ def simulate_backspace(generated_tokens, threshold=3):
     return generated_tokens
 
 # NEW HELPER FUNCTION: Improved simulate backspace
+
+
 def simulate_backspace_improved(generated_tokens, threshold=1):
     """
     Compress consecutive duplicate tokens.
@@ -1350,6 +1412,8 @@ def simulate_backspace_improved(generated_tokens, threshold=1):
     return new_tokens
 
 # NEW FUNCTION: Predict words ahead
+
+
 def predict_words_ahead(model, token_to_idx, idx_to_token, seed_tokens, num_words=5):
     """
     Predict ahead until 'num_words' words are generated.
@@ -1361,7 +1425,7 @@ def predict_words_ahead(model, token_to_idx, idx_to_token, seed_tokens, num_word
     predicted_words = []
     while len(predicted_words) < num_words:
         context = generated if CONTEXT_LOOKBACK == 0 else generated[-CONTEXT_LOOKBACK:]
-        X = torch.tensor([[ token_to_idx.get(t, list(token_to_idx.values())[0]) for t in context ]],
+        X = torch.tensor([[token_to_idx.get(t, list(token_to_idx.values())[0]) for t in context]],
                          dtype=torch.long)
         with torch.no_grad():
             output, hidden = model(X, hidden)
@@ -1373,11 +1437,13 @@ def predict_words_ahead(model, token_to_idx, idx_to_token, seed_tokens, num_word
             # split generated text into words and count non-empty ones
             words = detokenize_tokens(generated).split()
             predicted_words = words
-    return detokenize_tokens(generated[len(seed_tokens): ])
+    return detokenize_tokens(generated[len(seed_tokens):])
+
 
 # Integrate the neural network into generate_response.
 # Add a global variable for the AI's own name.
 AI_NAME = "HTP-1"
+
 
 def handle_single_word(input_text):
     # If the input is a single word, return a clarifying message.
@@ -1386,6 +1452,8 @@ def handle_single_word(input_text):
     return None
 
 # NEW FUNCTION: determine_next_token
+
+
 def determine_next_token(user_input, token_model):
     """
     Analyze user input and, using the token_model, determine an initial token for response generation.
@@ -1395,6 +1463,7 @@ def determine_next_token(user_input, token_model):
         determined = predict_next_token(tokens[-1], token_model)
         return determined if determined is not None else tokens[0]
     return " "
+
 
 def generate_response(user_input):
     # Check for single-word input before proceeding.
@@ -1414,7 +1483,8 @@ def generate_response(user_input):
         # === Begin Generation Procedure ===
         matched_numbers = set()
         conv_resp = find_best_conversation_match(user_input)
-        conv_text = replace_tokens(conv_resp, tokens_placeholder) if conv_resp else ""
+        conv_text = replace_tokens(
+            conv_resp, tokens_placeholder) if conv_resp else ""
         emotion_resp = extract_emotion_response(user_input, tokens_placeholder)
         for word in user_input.split():
             num = get_number_from_word(word)
@@ -1446,18 +1516,23 @@ def generate_response(user_input):
         if not combined_response.strip():
             combined_response = "AI: No response available for this input."
         else:
-            combined_response = replace_tokens(combined_response, tokens_placeholder)
-        replaced_responses = [replace_tokens(resp, tokens_placeholder) for resp in responses.values()]
+            combined_response = replace_tokens(
+                combined_response, tokens_placeholder)
+        replaced_responses = [replace_tokens(
+            resp, tokens_placeholder) for resp in responses.values()]
         # Incorporate vocabulary corpus into the overall training corpus.
         vocab_corpus = build_vocabulary_corpus()
-        corpus = (user_input + " ") * 3 + combined_response + " " + conv_text + " " + " ".join(replaced_responses) + " " + vocab_corpus
+        corpus = (user_input + " ") * 3 + combined_response + " " + \
+            conv_text + " " + " ".join(replaced_responses) + " " + vocab_corpus
         token_model = build_token_model(corpus)
-        neural_model, token_to_idx, idx_to_token = train_neural_model(corpus, num_epochs=10)
+        neural_model, token_to_idx, idx_to_token = train_neural_model(
+            corpus, num_epochs=250)
         seed_text = conv_text if conv_text else combined_response
         tokens_seed = tokenize_text(seed_text)
         neural_iterative = ""
         if neural_model is not None and token_to_idx is not None:
-            neural_iterative = generate_iteratively(neural_model, token_to_idx, idx_to_token, tokens_seed, total_tokens=50, chunk_size=5)
+            neural_iterative = generate_iteratively(
+                neural_model, token_to_idx, idx_to_token, tokens_seed, total_tokens=50, chunk_size=5)
         determined_token = determine_next_token(user_input, token_model)
         generated_tokens = []
         num_generated = 20
@@ -1471,32 +1546,40 @@ def generate_response(user_input):
         generated_extension = detokenize_tokens(generated_tokens)
         initial_response = combined_response + " " + generated_extension
         combined_final = initial_response + " " + neural_iterative
-        final_response = review_and_correct_response(combined_final, token_model)
+        final_response = review_and_correct_response(
+            combined_final, token_model)
         final_response = validate_response(user_input, final_response)
         final_response = ensure_correct_words(final_response)
         final_response = confirm_generation(final_response, token_model)
         # NEW: Refine final response using punctuation cleanup and similar memory.
-        final_response = refine_response_with_memory(final_response, user_input)
+        final_response = refine_response_with_memory(
+            final_response, user_input)
         # === End Generation Procedure ===
-        
+
         prev = {resp.strip().lower() for resp in review_memory(user_input)}
         if final_response.strip().lower() not in prev:
             break
         else:
-            print(f"Duplicate response detected, regenerating... Attempt {attempt+1}")
+            print(
+                f"Duplicate response detected, regenerating... Attempt {attempt+1}")
     if final_response.strip().lower() in prev:
         final_response += " (Fixed response)"
     save_to_memory({"input": user_input, "response": final_response})
     return cleanup_and_format_response(final_response)
 
 # NEW FUNCTION: Refine response punctuation and spacing using regex cleanup.
+
+
 def refine_response_with_memory(response, user_input):
     # Retrieve similar memory responses using input matching.
     memory = load_memory()
-    similar = [entry["response"] for entry in memory if user_input.lower() in entry.get("input", "").lower()]
+    similar = [entry["response"]
+               for entry in memory if user_input.lower() in entry.get("input", "").lower()]
     # Clean up spacing around punctuation.
-    refined = re.sub(r'\s+([,.!?])', r'\1', response)  # remove extra space before punctuation
-    refined = re.sub(r'([,.!?])([^\s])', r'\1 \2', refined)  # ensure one space after punctuation
+    # remove extra space before punctuation
+    refined = re.sub(r'\s+([,.!?])', r'\1', response)
+    # ensure one space after punctuation
+    refined = re.sub(r'([,.!?])([^\s])', r'\1 \2', refined)
     # If similar memory exists and looks reasonably formatted, use it as basis.
     if similar:
         best_match = similar[0]
@@ -1509,6 +1592,8 @@ def refine_response_with_memory(response, user_input):
 # ==============================================================
 
 # NEW HELPER FUNCTION: Display memory entries.
+
+
 def display_memory():
     """Display all memory entries with their index, input, and response."""
     memory = load_memory()
@@ -1517,8 +1602,10 @@ def display_memory():
     else:
         print("----- Memory Entries -----")
         for i, entry in enumerate(memory):
-            print(f"[{i}] Input: {entry.get('input','')} | Response: {entry.get('response','')}")
+            print(
+                f"[{i}] Input: {entry.get('input','')} | Response: {entry.get('response','')}")
         print("--------------------------")
+
 
 # In browser mode, we use Brython’s document and HTML to create a chat UI.
 if IS_BROWSER:
@@ -1538,7 +1625,8 @@ if IS_BROWSER:
         add_message("user", user_text)
         user_input_el.value = ""
         # Display a temporary 'thinking...' indicator.
-        thinking_div = html.DIV("AI is thinking...", Class="message ai thinking")
+        thinking_div = html.DIV("AI is thinking...",
+                                Class="message ai thinking")
         document["chatBox"] <= thinking_div
 
         def complete_response():
@@ -1574,10 +1662,11 @@ else:
             elif mode == '2':
                 # Display memory before editing.
                 display_memory()
-                
+
                 # Memory edit mode: select operation mode: single select or multi-select deletion
                 print("Memory Edit Mode:")
-                print("Enter 's' for single selection (edit or deletion) or 'm' for multi-select deletion.")
+                print(
+                    "Enter 's' for single selection (edit or deletion) or 'm' for multi-select deletion.")
                 edit_mode = input("Your choice (s/m): ").strip().lower()
                 memory = load_memory()
                 if not memory:
@@ -1596,7 +1685,8 @@ else:
                         print("Please enter a valid number.")
                         continue
                     print("Selected Entry:")
-                    print(f"{idx}: Input: '{memory[idx].get('input','')}' | Response: '{memory[idx].get('response','')}'")
+                    print(
+                        f"{idx}: Input: '{memory[idx].get('input','')}' | Response: '{memory[idx].get('response','')}'")
                     print("Press 1 to Edit, 2 to Delete this entry")
                     action = input("Enter your choice: ").strip()
                     if action == '1':
@@ -1612,10 +1702,12 @@ else:
                         print("Invalid choice.")
                 elif edit_mode == 'm':
                     # Multi-select deletion mode.
-                    print("Enter indices to delete one by one. Type 'd' when finished selection.")
+                    print(
+                        "Enter indices to delete one by one. Type 'd' when finished selection.")
                     indices_to_delete = []
                     while True:
-                        selection = input("Enter index (or 'd' to finish): ").strip()
+                        selection = input(
+                            "Enter index (or 'd' to finish): ").strip()
                         if selection.lower() == 'd':
                             break
                         try:
@@ -1635,7 +1727,8 @@ else:
                         continue
                     print("Selected Entries for deletion:")
                     for idx in indices_to_delete:
-                        print(f"{idx}: Input: '{memory[idx].get('input','')}' | Response: '{memory[idx].get('response','')}'")
+                        print(
+                            f"{idx}: Input: '{memory[idx].get('input','')}' | Response: '{memory[idx].get('response','')}'")
                     confirm = input("Confirm deletion? (y/n): ").strip()
                     if confirm.lower() == 'y':
                         for idx in sorted(indices_to_delete, reverse=True):
@@ -1647,14 +1740,18 @@ else:
                 else:
                     print("Invalid selection mode.")
 # NEW FUNCTION: Overwrite memory file with updated memory list.
+
+
 def update_memory(new_memory):
     with open(MEMORY_FILE, "w") as file:
         json.dump(new_memory, file, indent=4)
 
 # ==============================================================
 
+
 # Add these near the top with other global definitions
-CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ai_cache.json")
+CACHE_FILE = os.path.join(os.path.dirname(
+    os.path.abspath(__file__)), "ai_cache.json")
 RESPONSE_CACHE = {}
 MODEL_CACHE = {}
 TRAINING_CACHE = {
@@ -1664,6 +1761,7 @@ TRAINING_CACHE = {
     'token_maps': {}    # Store token-to-index mappings
 }
 
+
 def save_cache():
     """Save cache to disk"""
     cache_data = {
@@ -1672,6 +1770,7 @@ def save_cache():
     }
     with open(CACHE_FILE, "w") as f:
         json.dump(cache_data, f)
+
 
 def load_cache():
     """Load cache from disk"""
@@ -1697,21 +1796,24 @@ def load_cache():
                 'token_maps': {}
             }
 
+
 def compute_corpus_hash(corpus):
     """Compute hash of corpus for cache lookup"""
     import hashlib
     return hashlib.md5(corpus.encode()).hexdigest()
 
 # Modify train_neural_model to use cache
+
+
 def train_neural_model(corpus, num_epochs=10):
     """Train neural model with caching"""
     corpus_hash = compute_corpus_hash(corpus)
-    
+
     # Check cache first
     if corpus_hash in TRAINING_CACHE['corpus_hash']:
         cached_model_state = TRAINING_CACHE['model_states'].get(corpus_hash)
         cached_token_maps = TRAINING_CACHE['token_maps'].get(corpus_hash)
-        
+
         if cached_model_state and cached_token_maps:
             # Reconstruct model from cache
             token_to_idx, idx_to_token = cached_token_maps
@@ -1724,13 +1826,15 @@ def train_neural_model(corpus, num_epochs=10):
     token_to_idx, idx_to_token = build_token_vocab(corpus)
     vocab_size = len(token_to_idx)
     model = RNNGenerator(vocab_size, embed_dim=10, hidden_dim=20)
-    
+
     # Prepare training sequences (input: all tokens except last, target: all tokens except first)
     tokens = tokenize_text(corpus)
     input_seq = tokens[:-1]
     target_seq = tokens[1:]
-    X = torch.tensor([token_to_idx[t] for t in input_seq], dtype=torch.long).unsqueeze(0)
-    y = torch.tensor([token_to_idx[t] for t in target_seq], dtype=torch.long).unsqueeze(0)
+    X = torch.tensor([token_to_idx[t]
+                     for t in input_seq], dtype=torch.long).unsqueeze(0)
+    y = torch.tensor([token_to_idx[t]
+                     for t in target_seq], dtype=torch.long).unsqueeze(0)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.01)
@@ -1744,21 +1848,23 @@ def train_neural_model(corpus, num_epochs=10):
         optimizer.step()
         if (epoch + 1) % 5 == 0:
             print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item():.4f}")
-    
+
     # Cache the results
     TRAINING_CACHE['corpus_hash'][corpus_hash] = True
     TRAINING_CACHE['model_states'][corpus_hash] = model.state_dict()
     TRAINING_CACHE['token_maps'][corpus_hash] = (token_to_idx, idx_to_token)
     save_cache()
-    
+
     return model, token_to_idx, idx_to_token
 
 # Modify generate_response to use response cache
+
+
 def generate_response(user_input):
     # Check response cache first
     if user_input in RESPONSE_CACHE:
         return RESPONSE_CACHE[user_input]
-        
+
     # Check if the user is asking for the AI's name.
     if "your name" in user_input.lower():
         # Cache and return the answer immediately.
@@ -1772,7 +1878,8 @@ def generate_response(user_input):
         # === Begin Generation Procedure ===
         matched_numbers = set()
         conv_resp = find_best_conversation_match(user_input)
-        conv_text = replace_tokens(conv_resp, tokens_placeholder) if conv_resp else ""
+        conv_text = replace_tokens(
+            conv_resp, tokens_placeholder) if conv_resp else ""
         emotion_resp = extract_emotion_response(user_input, tokens_placeholder)
         for word in user_input.split():
             num = get_number_from_word(word)
@@ -1804,18 +1911,23 @@ def generate_response(user_input):
         if not combined_response.strip():
             combined_response = "AI: No response available for this input."
         else:
-            combined_response = replace_tokens(combined_response, tokens_placeholder)
-        replaced_responses = [replace_tokens(resp, tokens_placeholder) for resp in responses.values()]
+            combined_response = replace_tokens(
+                combined_response, tokens_placeholder)
+        replaced_responses = [replace_tokens(
+            resp, tokens_placeholder) for resp in responses.values()]
         # Incorporate vocabulary corpus into the overall training corpus.
         vocab_corpus = build_vocabulary_corpus()
-        corpus = (user_input + " ") * 3 + combined_response + " " + conv_text + " " + " ".join(replaced_responses) + " " + vocab_corpus
+        corpus = (user_input + " ") * 3 + combined_response + " " + \
+            conv_text + " " + " ".join(replaced_responses) + " " + vocab_corpus
         token_model = build_token_model(corpus)
-        neural_model, token_to_idx, idx_to_token = train_neural_model(corpus, num_epochs=10)
+        neural_model, token_to_idx, idx_to_token = train_neural_model(
+            corpus, num_epochs=10)
         seed_text = conv_text if conv_text else combined_response
         tokens_seed = tokenize_text(seed_text)
         neural_iterative = ""
         if neural_model is not None and token_to_idx is not None:
-            neural_iterative = generate_iteratively(neural_model, token_to_idx, idx_to_token, tokens_seed, total_tokens=50, chunk_size=5)
+            neural_iterative = generate_iteratively(
+                neural_model, token_to_idx, idx_to_token, tokens_seed, total_tokens=50, chunk_size=5)
         determined_token = determine_next_token(user_input, token_model)
         generated_tokens = []
         num_generated = 20
@@ -1829,29 +1941,34 @@ def generate_response(user_input):
         generated_extension = detokenize_tokens(generated_tokens)
         initial_response = combined_response + " " + generated_extension
         combined_final = initial_response + " " + neural_iterative
-        final_response = review_and_correct_response(combined_final, token_model)
+        final_response = review_and_correct_response(
+            combined_final, token_model)
         final_response = validate_response(user_input, final_response)
         final_response = ensure_correct_words(final_response)
         final_response = confirm_generation(final_response, token_model)
         # NEW: Refine final response using punctuation cleanup and similar memory.
-        final_response = refine_response_with_memory(final_response, user_input)
+        final_response = refine_response_with_memory(
+            final_response, user_input)
         # === End Generation Procedure ===
-        
+
         prev = {resp.strip().lower() for resp in review_memory(user_input)}
         if final_response.strip().lower() not in prev:
             break
         else:
-            print(f"Duplicate response detected, regenerating... Attempt {attempt+1}")
+            print(
+                f"Duplicate response detected, regenerating... Attempt {attempt+1}")
     if final_response.strip().lower() in prev:
         final_response += " (Enhanced)"
     save_to_memory({"input": user_input, "response": final_response})
     # Cache the final response
     RESPONSE_CACHE[user_input] = final_response
     save_cache()
-    
+
     return cleanup_and_format_response(final_response)
 
 # Add cache cleanup function
+
+
 def cleanup_cache(max_size=1000):
     """Remove oldest entries if cache exceeds max_size"""
     if len(RESPONSE_CACHE) > max_size:
@@ -1859,8 +1976,8 @@ def cleanup_cache(max_size=1000):
         items = list(RESPONSE_CACHE.items())
         # Keep only the most recent max_size items
         RESPONSE_CACHE.clear()
-        RESPONSE_CACHE.update(dict(items[-max_size: ]))
-    
+        RESPONSE_CACHE.update(dict(items[-max_size:]))
+
     # Cleanup training cache
     if len(TRAINING_CACHE['corpus_hash']) > max_size:
         corpus_hashes = list(TRAINING_CACHE['corpus_hash'].keys())
@@ -1869,8 +1986,9 @@ def cleanup_cache(max_size=1000):
             TRAINING_CACHE['model_states'].pop(old_hash, None)
             TRAINING_CACHE['embeddings'].pop(old_hash, None)
             TRAINING_CACHE['token_maps'].pop(old_hash, None)
-    
+
     save_cache()
+
 
 # Load cache at startup
 load_cache()
@@ -1899,10 +2017,11 @@ if __name__ == '__main__':
         elif mode == '2':
             # Display memory before editing.
             display_memory()
-            
+
             # Memory edit mode: select operation mode: single select or multi-select deletion
             print("Memory Edit Mode:")
-            print("Enter 's' for single selection (edit or deletion) or 'm' for multi-select deletion.")
+            print(
+                "Enter 's' for single selection (edit or deletion) or 'm' for multi-select deletion.")
             edit_mode = input("Your choice (s/m): ").strip().lower()
             memory = load_memory()
             if not memory:
@@ -1921,7 +2040,8 @@ if __name__ == '__main__':
                     print("Please enter a valid number.")
                     continue
                 print("Selected Entry:")
-                print(f"{idx}: Input: '{memory[idx].get('input','')}' | Response: '{memory[idx].get('response','')}'")
+                print(
+                    f"{idx}: Input: '{memory[idx].get('input','')}' | Response: '{memory[idx].get('response','')}'")
                 print("Press 1 to Edit, 2 to Delete this entry")
                 action = input("Enter your choice: ").strip()
                 if action == '1':
@@ -1937,10 +2057,12 @@ if __name__ == '__main__':
                     print("Invalid choice.")
             elif edit_mode == 'm':
                 # Multi-select deletion mode.
-                print("Enter indices to delete one by one. Type 'd' when finished selection.")
+                print(
+                    "Enter indices to delete one by one. Type 'd' when finished selection.")
                 indices_to_delete = []
                 while True:
-                    selection = input("Enter index (or 'd' to finish): ").strip()
+                    selection = input(
+                        "Enter index (or 'd' to finish): ").strip()
                     if selection.lower() == 'd':
                         break
                     try:
@@ -1960,7 +2082,8 @@ if __name__ == '__main__':
                     continue
                 print("Selected Entries for deletion:")
                 for idx in indices_to_delete:
-                    print(f"{idx}: Input: '{memory[idx].get('input','')}' | Response: '{memory[idx].get('response','')}'")
+                    print(
+                        f"{idx}: Input: '{memory[idx].get('input','')}' | Response: '{memory[idx].get('response','')}'")
                 confirm = input("Confirm deletion? (y/n): ").strip()
                 if confirm.lower() == 'y':
                     for idx in sorted(indices_to_delete, reverse=True):
@@ -1971,6 +2094,6 @@ if __name__ == '__main__':
                     print("Deletion cancelled.")
             else:
                 print("Invalid selection mode.")
-        
+
         # Add periodic cache cleanup
         cleanup_cache()

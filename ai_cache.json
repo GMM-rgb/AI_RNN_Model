@@ -1,16 +1,1 @@
-[
-    {
-        "id": 1,
-        "name": "AI Cache",
-        "description": "A cache for storing AI-related data.",
-        "version": "1.0",
-        "author": "Your Name",
-        "license": "MIT",
-        "dependencies": [],
-        "config": {
-            "cache_size": 100,
-            "expiration_time": 3600
-        },
-        "data": []
-    }
-]
+{"response_cache": {}, "training_cache": {"corpus_hash": {}, "model_states": {}, "embeddings": {}, "token_maps": {}}}
