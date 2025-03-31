@@ -831,7 +831,16 @@ vocabulary_data = [
             "The baby was as quiet as a mouse."
         ],
         "synonyms": ["metaphor", "euphemism", "analogy", "circumlocution"]
-    }
+    },
+    {
+        "word": "Metaphor",
+        "definition": "A figure of speech in which a word or phrase is applied to an object or action to which it is not literally applicable.",
+        "usage": [
+            "My body is a temple",
+            "You're as stubborn as a mule"
+        ],
+        "synonyms": ["symbol", "emblem", "word painting", "word picture", "conceit"]
+    },
     {
         "word": "Accomplished",
         "definition": "To be (accomplished) means to be highly skilled, proficient, and successful in a particular area or field, or to have successfully completed or achieved something significant.",
