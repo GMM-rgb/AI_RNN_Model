@@ -1113,7 +1113,7 @@ def get_valid_words():
             valid.add(synonym.lower())
     return valid
 
-# New helper function to lookup vocabulary definitions.
+# Helper function to lookup vocabulary definitions.
 def lookup_vocabulary(word):
     """
     Lookup vocabulary data for a given word.
