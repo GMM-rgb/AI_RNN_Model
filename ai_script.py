@@ -131,7 +131,7 @@ data = [
     {"word": "Responsible", "number": 8},
     {"word": "Ambitious", "number": 8},
     {"word": "Passionate", "number": 8},
-    {"word": "Aboriginal", "number": 12}
+    {"word": "Aboriginal", "number": 12},
     {"word": " ", "number": 9999}
 ]
 
@@ -864,9 +864,9 @@ vocabulary_data = [
         "word": "Franc",
         "definition": "The basic monetary unit of Switzerland and several other countries (including France, Belgium, and Luxembourg until the introduction of the euro), equal to 100 centimes.",
         "usage": [
-            None
+            ""
         ],
-        "synonyms": [None]
+        "synonyms": [""]
     }
 ]
 
