@@ -764,6 +764,56 @@ vocabulary_data = [
             "He is an advocate for world peace."
         ],
         "synonyms": ["calm", "serenity", "harmony"]
+    },
+    {
+        "word": "Happy",
+        "definition": "Feeling or showing pleasure or contentment.",
+        "usage": [
+            "I am happy to see you.",
+            "She is happy with her achievements.",
+            "He makes me happy."
+        ],
+        "synonyms": ["joyful", "content", "cheerful"]
+    },
+    {
+        "word": "Sad",
+        "definition": "Feeling or showing sorrow; unhappy.",
+        "usage": [
+            "I feel sad about the news.",
+            "She was sad to leave her friends.",
+            "He is sad but hopeful."
+        ],
+        "synonyms": ["unhappy", "sorrowful", "dejected"]
+    },
+    {
+        "word": "Angry",
+        "definition": "Having a strong feeling of or showing annoyance, displeasure, or hostility.",
+        "usage": [
+            "I am angry about the situation.",
+            "She was angry at the unfair treatment.",
+            "He expressed his anger constructively."
+        ],
+        "synonyms": ["mad", "irate", "furious"]
+    },
+    {
+        "word": "Excited",
+        "definition": "Very enthusiastic and eager.",
+        "usage": [
+            "I am excited about the event.",
+            "She felt excited to meet new people.",
+            "He is excited for the future."
+        ],
+        "synonyms": ["enthusiastic", "eager", "thrilled"]
+    },
+    {
+        "word": "Frustrated",
+        "definition": "(of a person) feeling or expressing distress and annoyance, especially because of inability to change or achieve something.",
+        "usage": [
+            "I feel frustrated with the delays.",
+            "She was frustrated by the lack of progress.",
+            "He expressed his frustration openly."
+        ],
+        "synonyms": ["annoyed", "exasperated", "irritated"]
     }
 ]
 
