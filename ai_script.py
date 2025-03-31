@@ -821,6 +821,18 @@ vocabulary_data = [
         "synonyms": ["annoyed", "exasperated", "irritated"]
     },
     {
+        "word": "Simile",
+        "definition": "A figure of speech involving the comparison of one thing with another thing of a different kind, used to make a description more emphatic or vivid (e.g., as brave as a lion, crazy like a fox ).",
+        "usage": [
+            "His audacious deployment of simile and metaphor.",
+            "He ran like the wind.",
+            "He was as cool as a cucumber.",
+            "The room was as clean as a whistle.",
+            "The baby was as quiet as a mouse."
+        ],
+        "synonyms": ["metaphor", "euphemism", "analogy", "circumlocution"]
+    }
+    {
         "word": "Accomplished",
         "definition": "To be (accomplished) means to be highly skilled, proficient, and successful in a particular area or field, or to have successfully completed or achieved something significant.",
         "usage": [
