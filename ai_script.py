@@ -1211,20 +1211,26 @@ def generate_neural_output(model, token_to_idx, idx_to_token, seed_tokens, num_g
     generated_tokens = [idx_to_token[idx] for idx in outputs]
     return detokenize_tokens(generated_tokens)
 
+# NEW GLOBAL PARAMETER for context lookback (must be defined before its use)
+CONTEXT_LOOKBACK = 0
+
 # NEW FUNCTION: Iterative Neural Generation
-def generate_iteratively(model, token_to_idx, idx_to_token, seed_tokens, total_tokens=50, chunk_size=5):
+def generate_iteratively(model, token_to_idx, idx_to_token, seed_tokens, total_tokens=50, chunk_size=5, context_lookback=CONTEXT_LOOKBACK):
     """
-    Generate output iteratively by feeding the complete history each chunk.
-    Uses the network in chunks so that the full generated sequence is passed as input
-    to produce the next segment.
+    Generate output iteratively using only the last 'context_lookback' tokens as context.
+    After each chunk, compress consecutive duplicates using the improved backspace simulation.
+    Added a maximum iteration limit and break condition if no progress is made.
     """
     model.eval()
-    generated = list(seed_tokens)  # start with seed tokens (list of token numbers)
+    generated = list(seed_tokens)  # start with seed tokens
     hidden = None
-    default_idx = list(token_to_idx.values())[0]  # default index from vocabulary
-    while len(generated) < total_tokens:
-        # Use token_to_idx.get for each token so missing keys use default.
-        X = torch.tensor([[ token_to_idx.get(t, default_idx) for t in generated ]], dtype=torch.long)
+    default_idx = list(token_to_idx.values())[0]
+    max_iterations = 20  # maximum iterations to prevent infinite loops
+    iteration = 0
+    while len(generated) < total_tokens and iteration < max_iterations:
+        iteration += 1
+        context = generated if context_lookback == 0 else generated[-context_lookback:]
+        X = torch.tensor([[ token_to_idx.get(t, default_idx) for t in context ]], dtype=torch.long)
         with torch.no_grad():
             output, hidden = model(X, hidden)
         chunk = []
@@ -1235,7 +1241,11 @@ def generate_iteratively(model, token_to_idx, idx_to_token, seed_tokens, total_t
             with torch.no_grad():
                 out, hidden = model(input_tensor, hidden)
             current_idx = out[0, -1].argmax().item()
-        generated.extend(chunk)
+        # Compress duplicates and check progress
+        new_generated = simulate_backspace_improved(generated, threshold=2)
+        if new_generated == generated:
+            break  # no change detected, break out to avoid infinite loop
+        generated = new_generated + chunk
     return detokenize_tokens([ idx_to_token[idx] for idx in generated[len(seed_tokens): ] ])
 
 # NEW HELPER FUNCTION: Build vocabulary corpus from vocabulary_data.
@@ -1258,33 +1268,6 @@ def simulate_backspace(generated_tokens, threshold=3):
     if len(generated_tokens) >= threshold and all(t == generated_tokens[-1] for t in generated_tokens[-threshold:]):
         return generated_tokens[:-1]  # remove the last repeated token
     return generated_tokens
-
-# Modify generate_iteratively() to include backspace simulation.
-def generate_iteratively(model, token_to_idx, idx_to_token, seed_tokens, total_tokens=50, chunk_size=5):
-    """
-    Generate output iteratively by feeding the complete history each chunk.
-    After each chunk, check and simulate backspace if repetition is detected.
-    """
-    model.eval()
-    generated = list(seed_tokens)  # start with seed tokens (list of token numbers)
-    hidden = None
-    default_idx = list(token_to_idx.values())[0]  # default index from vocabulary
-    while len(generated) < total_tokens:
-        X = torch.tensor([[ token_to_idx.get(t, default_idx) for t in generated ]], dtype=torch.long)
-        with torch.no_grad():
-            output, hidden = model(X, hidden)
-        chunk = []
-        current_idx = output[0, -1].argmax().item()
-        for _ in range(chunk_size):
-            chunk.append(current_idx)
-            input_tensor = torch.tensor([[current_idx]], dtype=torch.long)
-            with torch.no_grad():
-                out, hidden = model(input_tensor, hidden)
-            current_idx = out[0, -1].argmax().item()
-        # Simulate backspace correction if repetition occurs.
-        generated = simulate_backspace(generated, threshold=3)
-        generated.extend(chunk)
-    return detokenize_tokens([ idx_to_token[idx] for idx in generated[len(seed_tokens): ] ])
 
 # NEW HELPER FUNCTION: Improved simulate backspace
 def simulate_backspace_improved(generated_tokens, threshold=1):
@@ -1316,36 +1299,6 @@ def simulate_backspace_improved(generated_tokens, threshold=1):
         i += count
     return new_tokens
 
-# Modify generate_iteratively() to use the improved backspace simulation.
-def generate_iteratively(model, token_to_idx, idx_to_token, seed_tokens, total_tokens=50, chunk_size=5):
-    """
-    Generate output iteratively by feeding the complete history in chunks.
-    After each chunk, compress consecutive duplicates using the improved backspace simulation.
-    """
-    model.eval()
-    generated = list(seed_tokens)  # start with seed tokens (list of token numbers)
-    hidden = None
-    default_idx = list(token_to_idx.values())[0]  # default index from vocabulary
-    while len(generated) < total_tokens:
-        X = torch.tensor([[ token_to_idx.get(t, default_idx) for t in generated ]], dtype=torch.long)
-        with torch.no_grad():
-            output, hidden = model(X, hidden)
-        chunk = []
-        current_idx = output[0, -1].argmax().item()
-        for _ in range(chunk_size):
-            chunk.append(current_idx)
-            input_tensor = torch.tensor([[current_idx]], dtype=torch.long)
-            with torch.no_grad():
-                out, hidden = model(input_tensor, hidden)
-            current_idx = out[0, -1].argmax().item()
-        # Compress duplicate tokens in the generated sequence.
-        generated = simulate_backspace_improved(generated, threshold=2)
-        generated.extend(chunk)
-    return detokenize_tokens([ idx_to_token[idx] for idx in generated[len(seed_tokens): ] ])
-
-# NEW GLOBAL PARAMETER for context lookback (set to 0 to use entire history)
-CONTEXT_LOOKBACK = 0  # adjust this number to use only the last N tokens as context
-
 # NEW FUNCTION: Predict words ahead
 def predict_words_ahead(model, token_to_idx, idx_to_token, seed_tokens, num_words=5):
     """
@@ -1372,33 +1325,6 @@ def predict_words_ahead(model, token_to_idx, idx_to_token, seed_tokens, num_word
             predicted_words = words
     return detokenize_tokens(generated[len(seed_tokens): ])
 
-# MODIFY: Improved generate_iteratively() that now accepts context_lookback parameter.
-def generate_iteratively(model, token_to_idx, idx_to_token, seed_tokens, total_tokens=50, chunk_size=5, context_lookback=CONTEXT_LOOKBACK):
-    """
-    Generate output iteratively using only the last 'context_lookback' tokens as context if specified.
-    After each chunk, compress consecutive duplicates using the improved backspace simulation.
-    """
-    model.eval()
-    generated = list(seed_tokens)  # start with seed tokens
-    hidden = None
-    default_idx = list(token_to_idx.values())[0]
-    while len(generated) < total_tokens:
-        context = generated if context_lookback == 0 else generated[-context_lookback:]
-        X = torch.tensor([[ token_to_idx.get(t, default_idx) for t in context ]], dtype=torch.long)
-        with torch.no_grad():
-            output, hidden = model(X, hidden)
-        chunk = []
-        current_idx = output[0, -1].argmax().item()
-        for _ in range(chunk_size):
-            chunk.append(current_idx)
-            input_tensor = torch.tensor([[current_idx]], dtype=torch.long)
-            with torch.no_grad():
-                out, hidden = model(input_tensor, hidden)
-            current_idx = out[0, -1].argmax().item()
-        generated = simulate_backspace_improved(generated, threshold=2)
-        generated.extend(chunk)
-    return detokenize_tokens([ idx_to_token[idx] for idx in generated[len(seed_tokens): ] ])
-
 # Integrate the neural network into generate_response.
 # Add a global variable for the AI's own name.
 AI_NAME = "Bob"
@@ -1408,6 +1334,17 @@ def handle_single_word(input_text):
     if len(input_text.split()) == 1:
         return "I'm here! Can you elaborate on that?"
     return None
+
+# NEW FUNCTION: determine_next_token
+def determine_next_token(user_input, token_model):
+    """
+    Analyze user input and, using the token_model, determine an initial token for response generation.
+    """
+    tokens = tokenize_text(user_input)
+    if tokens:
+        determined = predict_next_token(tokens[-1], token_model)
+        return determined if determined is not None else tokens[0]
+    return " "
 
 def generate_response(user_input):
     # Check for single-word input before proceeding.
@@ -1471,9 +1408,10 @@ def generate_response(user_input):
         neural_iterative = ""
         if neural_model is not None and token_to_idx is not None:
             neural_iterative = generate_iteratively(neural_model, token_to_idx, idx_to_token, tokens_seed, total_tokens=50, chunk_size=5)
+        determined_token = determine_next_token(user_input, token_model)
         generated_tokens = []
         num_generated = 20
-        current_token = tokens_seed[-1] if tokens_seed else " "
+        current_token = determined_token  # use the determined token as the starting point
         for _ in range(num_generated):
             next_token = predict_next_token(current_token, token_model)
             if next_token is None:
@@ -1828,9 +1766,10 @@ def generate_response(user_input):
         neural_iterative = ""
         if neural_model is not None and token_to_idx is not None:
             neural_iterative = generate_iteratively(neural_model, token_to_idx, idx_to_token, tokens_seed, total_tokens=50, chunk_size=5)
+        determined_token = determine_next_token(user_input, token_model)
         generated_tokens = []
         num_generated = 20
-        current_token = tokens_seed[-1] if tokens_seed else " "
+        current_token = determined_token  # use the determined token as the starting point
         for _ in range(num_generated):
             next_token = predict_next_token(current_token, token_model)
             if next_token is None:
