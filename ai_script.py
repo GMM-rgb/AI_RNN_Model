@@ -1526,7 +1526,7 @@ def generate_response(user_input):
             conv_text + " " + " ".join(replaced_responses) + " " + vocab_corpus
         token_model = build_token_model(corpus)
         neural_model, token_to_idx, idx_to_token = train_neural_model(
-            corpus, num_epochs=250)
+            corpus, num_epochs=50)
         seed_text = conv_text if conv_text else combined_response
         tokens_seed = tokenize_text(seed_text)
         neural_iterative = ""
